@@ -3,9 +3,7 @@ const path = require('path');
 const os = require('os');
 const Transcript = require('../models/Transcript');
 const { transcriptVideo } = require('../middleware/transcriptV');
-const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
-const ffmpeg = require('fluent-ffmpeg');
-ffmpeg.setFfmpegPath(ffmpegPath);
+const { convertVideoToMp3 } = require('../middleware/convertVideoToMp3');
 
 const userHomeDir = os.homedir();
 const downloadFolderPath = path.join(userHomeDir, 'Downloads');
@@ -13,12 +11,7 @@ const chunkDirectoryPath = path.join(downloadFolderPath, 'uploads');
 const videoDirectoryPath = path.join(downloadFolderPath, 'helpMeOut');
 
 const transcriptVid = async ({ videoPath, uploadKey }) => {
-  console.log(videoPath);
   console.log('key', uploadKey);
-
-  const audioFilePath = path.join(downloadFolderPath, `${uploadKey}.mp3`);
-
-  console.log('mp3', audioFilePath);
 
   // Check for duplicate uploadKey
   const duplicateUploadKey = await Transcript.findOne({ uploadKey })
@@ -31,19 +24,9 @@ const transcriptVid = async ({ videoPath, uploadKey }) => {
   }
 
   try {
-    ffmpeg(videoPath)
-      .toFormat('mp3')
-      .on('end', () => {
-        console.log('Conversion finished successfully');
-        resolve();
-      })
-      .on('error', (err) => {
-        console.error('Error:', err);
-        reject(err);
-      })
-      .save(audioFilePath);
+    const audio = await convertVideoToMp3({ videoPath, uploadKey });
 
-    const transcript = await transcriptVideo(audioFilePath);
+    const transcript = await transcriptVideo(audio);
 
     // Create and store new transcript
     const trans = await Transcript.create({
@@ -129,7 +112,6 @@ const uploadComplete = async (req, res) => {
 
     await new Promise((resolve) => {
       writeStream.on('finish', async () => {
-        console.log('k1', uploadKey);
         const rTrans = await transcriptVid({
           videoPath: outputFilePath,
           uploadKey: uploadKey
@@ -143,6 +125,7 @@ const uploadComplete = async (req, res) => {
       .status(200)
       .json({ message: 'video transcript and saved successfully' });
   } catch (error) {
+    fs.rmdirSync(videoDirectoryPath, { recursive: true });
     console.log('Error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
