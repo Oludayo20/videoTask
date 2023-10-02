@@ -12,7 +12,7 @@ const downloadFolderPath = path.join(userHomeDir, 'Downloads');
 const chunkDirectoryPath = path.join(downloadFolderPath, 'uploads');
 const videoDirectoryPath = path.join(downloadFolderPath, 'helpMeOut');
 
-const transcriptVid = async (videoPath, uploadKey, res) => {
+const transcriptVid = async (videoPath, uploadKey) => {
   const audioFilePath = path.join(downloadFolderPath, `${uploadKey}.mp3`);
 
   // Check for duplicate uploadKey
@@ -38,7 +38,7 @@ const transcriptVid = async (videoPath, uploadKey, res) => {
       })
       .save(audioFilePath);
 
-    const transcript = transcriptVideo(audioFilePath);
+    const transcript = await transcriptVideo(audioFilePath);
 
     // Create and store new transcript
     const trans = await Transcript.create({
@@ -55,6 +55,7 @@ const transcriptVid = async (videoPath, uploadKey, res) => {
 
     // Delete the temporary files
     fs.unlinkSync(audioFilePath);
+    fs.rmdirSync(chunkDirectoryPath, { recursive: true });
   } catch (error) {
     console.log('Error:', error);
 
@@ -99,8 +100,6 @@ const uploadChunk = async (req, res) => {
 
 const uploadComplete = async (req, res) => {
   const { uploadKey } = req.body;
-
-  console.log(req.body);
 
   if (!uploadKey) {
     res.status(400).json({ error: 'No uploadKey' });
@@ -202,14 +201,16 @@ const streamAllVideos = async (req, res) => {
         'Content-Type': 'video/mp4'
       };
 
-      const transcript = await Transcript.find().lean();
-
       res.writeHead(206, headers);
       // First, send the transcript data as a JSON object
-      res.write(JSON.stringify({ transcript }));
 
       const stream = fs.createReadStream(videoFilePath, { start, end });
       stream.pipe(res);
+    }
+
+    const transcript = await Transcript.find().lean();
+    if (transcript) {
+      res.write(JSON.stringify({ transcript }));
     }
   } catch (error) {
     console.error('Error:', error);
