@@ -13,6 +13,7 @@ const openAi = new OpenAI({
 
 const userHomeDir = os.homedir();
 const downloadFolderPath = path.join(userHomeDir, 'Downloads');
+const directoryPath = path.join(downloadFolderPath, 'uploads');
 
 // const receiveVideoChunks = async (req, res) => {
 //   try {
@@ -128,11 +129,10 @@ const startUpload = (req, res) => {
   res.status(200).json({ uploadKey });
 };
 
-const receiveVideoChunks = async (req, res) => {
+const uploadChunk = async (req, res) => {
   try {
-    const { uploadKey, isLastChunk, chunkIndex } = req.body;
+    const { uploadKey, chunkIndex } = req.body;
     const chunkData = req.file.buffer;
-    const directoryPath = path.join(downloadFolderPath, 'uploads');
 
     const chunkFilePath = path.join(
       directoryPath,
@@ -145,47 +145,58 @@ const receiveVideoChunks = async (req, res) => {
 
     await fs.writeFile(chunkFilePath, chunkData);
 
-    const outputFilePath = path.join(downloadFolderPath, `${uploadKey}.mp4`);
-
-    if (isLastChunk) {
-      const tempFiles = fs.readdirSync(directoryPath).sort((a, b) => {
-        const indexA = parseInt(a.split('_')[1].split('.')[0]);
-        const indexB = parseInt(b.split('_')[1].split('.')[0]);
-        return indexA - indexB;
-      });
-
-      const writeStream = fs.createWriteStream(outputFilePath);
-
-      for (const tempFile of tempFiles) {
-        const data = fs.readFileSync(path.join(directoryPath, tempFile));
-        await writeStream.write(data);
-        // fs.unlinkSync(path.join(directoryPath, tempFile));
-      }
-
-      writeStream.end();
-
-      await new Promise((resolve) => {
-        writeStream.on('finish', () => {
-          // fs.rmdirSync(directoryPath, { recursive: true });
-          res.status(200).json({ message: 'Video transcription in process' });
-
-          transcribeVideo(outputFilePath, uploadKey);
-
-          resolve;
-        });
-      });
-
-      // writeStream.on('finish', () => {
-      //   // fs.rmdirSync(directoryPath, { recursive: true });
-      //   res.status(200).json({ message: 'Video transcription in process' });
-
-      //   transcribeVideo(outputFilePath, uploadKey);
-      // });
-    } else {
-      res.status(200).json({ message: 'Chunk received successfully' });
-    }
+    res.status(200).json({ message: 'Chunk received successfully' });
   } catch (error) {
     console.error('Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+const uploadComplete = async (req, res) => {
+  const { uploadKey } = req.body;
+
+  try {
+    const outputFilePath = path.join(downloadFolderPath, `${uploadKey}.mp4`);
+
+    const tempFiles = fs.readdirSync(directoryPath).sort((a, b) => {
+      const indexA = parseInt(a.split('_')[1].split('.')[0]);
+      const indexB = parseInt(b.split('_')[1].split('.')[0]);
+      return indexA - indexB;
+    });
+
+    const writeStream = fs.createWriteStream(outputFilePath);
+
+    for (const tempFile of tempFiles) {
+      const data = fs.readFileSync(path.join(directoryPath, tempFile));
+      await writeStream.write(data);
+      // fs.unlinkSync(path.join(directoryPath, tempFile));
+    }
+
+    writeStream.end();
+
+    await new Promise((resolve) => {
+      writeStream.on('finish', () => {
+        // fs.rmdirSync(directoryPath, { recursive: true });
+        res.status(200).json({ message: 'Video transcription in process' });
+
+        transcribeVideo(outputFilePath, uploadKey);
+
+        resolve;
+      });
+    });
+
+    // writeStream.on('finish', () => {
+    //   // fs.rmdirSync(directoryPath, { recursive: true });
+    //   res.status(200).json({ message: 'Video transcription in process' });
+
+    //   transcribeVideo(outputFilePath, uploadKey);
+    // });
+
+    res
+      .status(200)
+      .json({ message: 'video transcript and saved successfully' });
+  } catch (error) {
+    console.log('Error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -217,7 +228,7 @@ const transcribeVideo = async (videoPath, uploadKey) => {
     // res.status(200).json({ transcription: transcriptionResult });
   } catch (error) {
     console.log('Error:', error);
-    // res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
 
@@ -253,6 +264,7 @@ const streamBackVideo = async (req, res) => {
 
 module.exports = {
   startUpload,
-  receiveVideoChunks,
+  uploadChunk,
+  uploadComplete,
   streamBackVideo
 };
