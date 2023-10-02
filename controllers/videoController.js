@@ -11,8 +11,6 @@ const chunkDirectoryPath = path.join(downloadFolderPath, 'uploads');
 const videoDirectoryPath = path.join(downloadFolderPath, 'helpMeOut');
 
 const transcriptVid = async ({ videoPath, uploadKey }) => {
-  console.log('key', uploadKey);
-
   // Check for duplicate uploadKey
   const duplicateUploadKey = await Transcript.findOne({ uploadKey })
     .collation({ locale: 'en', strength: 2 })
@@ -20,7 +18,7 @@ const transcriptVid = async ({ videoPath, uploadKey }) => {
     .exec();
 
   if (duplicateUploadKey) {
-    return res.status(409).json({ message: 'Transcript already exists' });
+    throw Error('Transcript already exists');
   }
 
   try {
@@ -35,12 +33,11 @@ const transcriptVid = async ({ videoPath, uploadKey }) => {
     });
 
     if (trans) {
+      // Delete the temporary files
+      fs.unlinkSync(audio);
+      fs.rmdirSync(chunkDirectoryPath, { recursive: true });
       return trans;
     }
-
-    // Delete the temporary files
-    fs.unlinkSync(audioFilePath);
-    fs.rmdirSync(chunkDirectoryPath, { recursive: true });
   } catch (error) {
     throw error;
   }
@@ -116,9 +113,8 @@ const uploadComplete = async (req, res) => {
           videoPath: outputFilePath,
           uploadKey: uploadKey
         });
-        console.log(rTrans);
+        resolve(rTrans);
       });
-      resolve;
     });
 
     res

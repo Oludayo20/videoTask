@@ -20,16 +20,16 @@ const transcriptVideo = async (audioFilePath) => {
       {
         headers: headers,
         params: {
-          punctuate: true,
           format: 'mp3',
-          language: 'en-US'
+          language: 'en-US',
+          punctuate: true
         }
       }
     );
 
-    console.log(response.data);
+    console.log(response.data.results.channels[0].alternatives[0].transcript);
 
-    return response.data;
+    return response.data.results.channels[0].alternatives[0].transcript;
   } catch (error) {
     throw error;
   }
