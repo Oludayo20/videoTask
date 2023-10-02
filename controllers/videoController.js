@@ -1,6 +1,7 @@
 const fs = require('fs-extra');
 const path = require('path');
 const os = require('os');
+const Transcript = require('../models/Transcript');
 const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
 const ffmpeg = require('fluent-ffmpeg');
 ffmpeg.setFfmpegPath(ffmpegPath);
@@ -9,7 +10,6 @@ const OpenAIApi = require('openai');
 const openai = new OpenAIApi({
   apiKey: 'process.env.API_KEY'
 });
-// const openai = new OpenAIApi(configuration);
 
 const userHomeDir = os.homedir();
 const downloadFolderPath = path.join(userHomeDir, 'Downloads');
@@ -71,21 +71,11 @@ const uploadComplete = async (req, res) => {
 
     await new Promise((resolve) => {
       writeStream.on('finish', async () => {
-        // fs.rmdirSync(directoryPath, { recursive: true });
-        res.status(200).json({ message: 'Video transcription in process' });
-
         await transcribeVideo(outputFilePath, uploadKey);
 
         resolve;
       });
     });
-
-    // writeStream.on('finish', () => {
-    //   // fs.rmdirSync(directoryPath, { recursive: true });
-    //   res.status(200).json({ message: 'Video transcription in process' });
-
-    //   transcribeVideo(outputFilePath, uploadKey);
-    // });
 
     res
       .status(200)
@@ -97,44 +87,49 @@ const uploadComplete = async (req, res) => {
 };
 
 const transcribeVideo = async (videoPath, uploadKey) => {
-  const audioFilePath = path.join(downloadFolderPath, `${uploadKey}.wav`);
+  const audioFilePath = path.join(downloadFolderPath, `${uploadKey}.mp3`);
+
+  // Check for duplicate uploadKey
+  const duplicateUploadKey = await Transcript.findOne({ uploadKey })
+    .collation({ locale: 'en', strength: 2 })
+    .lean()
+    .exec();
+
+  if (duplicateUploadKey) {
+    return res.status(409).json({ message: 'Transcript already exist' });
+  }
+
   await new Promise((resolve, reject) => {
     ffmpeg(videoPath)
-      .toFormat('wav')
+      .toFormat('mp3')
       .on('end', resolve)
       .on('error', reject)
       .save(audioFilePath);
   });
 
   try {
-    const transcript = await openai.createTranscription(
-      fs.createReadStream(filename),
-      'whisper-1'
-    );
+    const transcript = await openai.audio.transcriptions.create({
+      file: fs.createReadStream(audioFilePath),
+      model: 'whisper-1'
+    });
 
     const transcriptionText = transcript.data; // Extracting the transcription content
 
-    // Create a JSON object to hold the transcript
-    const transcriptData = {
-      transcript: transcriptionText
-    };
+    console.log(transcriptionText);
 
-    // Specify the file path where you want to store the transcript
-    const transcriptFilePath = path.join(
-      downloadFolderPath,
-      `${uploadKey}.txt`
-    );
+    // Create and store new transcript
+    const trans = await Transcript.create(userObject);
 
-    // Write the transcript content to the local disk
-    await fs.writeFile(
-      transcriptFilePath,
-      JSON.stringify(transcriptData, null, 2)
-    );
+    if (trans) {
+      //created
+      res.status(201).json({
+        message: `New transcript with the uploadKey: ${uploadKey} created`
+      });
+    }
 
-    // Delete the temporary audio file
-    // fs.unlinkSync(audioFilePath);
-
-    res.status(200).json({ message: 'transcription done' });
+    // Delete the temporary files
+    fs.unlinkSync(audioFilePath);
+    fs.rmdirSync(directoryPath, { recursive: true });
   } catch (error) {
     console.log('Error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -144,10 +139,12 @@ const transcribeVideo = async (videoPath, uploadKey) => {
 const streamBackVideo = async (req, res) => {
   const { uploadKey } = req.params;
 
-  console.log(uploadKey);
-
   try {
     const videoFilePath = path.join(downloadFolderPath, `${uploadKey}.mp4`);
+    const transcript = await Transcript.findOne({ uploadKey })
+      .collation({ locale: 'en', strength: 2 })
+      .lean()
+      .exec();
 
     const stat = fs.statSync(videoFilePath);
     const fileSize = stat.size;
@@ -167,6 +164,11 @@ const streamBackVideo = async (req, res) => {
       };
 
       res.writeHead(206, headers);
+
+      // First, send the transcript data as a JSON object
+      res.write(JSON.stringify({ transcript }));
+
+      // Then, send the video file
       file.pipe(res);
     } else {
       const headers = {
@@ -174,6 +176,11 @@ const streamBackVideo = async (req, res) => {
         'Content-Type': 'video/mp4'
       };
       res.writeHead(200, headers);
+
+      // First, send the transcript data as a JSON object
+      res.write(JSON.stringify({ transcript }));
+
+      // Then, send the video file
       fs.createReadStream(videoFilePath).pipe(res);
     }
   } catch (error) {
