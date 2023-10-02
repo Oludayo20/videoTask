@@ -1,93 +1,74 @@
-# Node.js Express API with MongoDB
+````markdown
+# Video Upload API Documentation
 
-This is a simple RESTful API built using Node.js and Express, with MongoDB as the chosen database. It allows you to perform CRUD (Create, Read, Update, Delete) operations on a "Person" resource.
+Welcome to the Video Upload API documentation for HNGxVideoStreaming. This API allows you to manage video uploads, transcriptions, and streaming. Below are the available endpoints and their descriptions.
 
-## Prerequisites
+## Base URL
 
-Before running the application, make sure you have the following installed:
+The base URL for all API endpoints is `https://blue-alert-caiman.cyclic.cloud/`.
 
-- Node.js and npm (Node Package Manager)
-- MongoDB
+## Endpoints
 
-## Getting Started
+### Start Video Upload
 
-1. Clone the repository to your local machine:
+- **URL**: `/startUpload`
+- **Method**: `POST`
+- **Description**: Start a new video upload operation.
+- **Parameters**:
+  - `fileName` (string): The name of the file to upload.
+- **Response**:
+  - `uploadKey` (string): A unique key for the upload context.
+- **Example**:
+  ```http
+  POST /VideoUpload/startUpload?fileName=myvideo.mp4
+  ```
+````
 
-```bash
- git clone git@github.com:Oludayo20/hngx-task-two.git
- cd hngx-task-two
-```
+### Upload Video Chunks
 
-2. Install the project dependencies:
+- **URL**: `/UploadChunks`
+- **Method**: `POST`
+- **Description**: Upload video chunks for an ongoing upload operation.
+- **Parameters**:
+  - `uploadKey` (string): The unique key for the upload context.
+- **Request Body**: Binary video chunk data.
+- **Response**: Information about the upload operation.
+- **Example**:
+  ```http
+  POST /VideoUpload/UploadChunks?uploadKey=your_upload_key_here
+  ```
 
-```bash
- npm install
-```
+### Complete Video Upload
 
-3. Configure MongoDB:
+- **URL**: `/UploadComplete`
+- **Method**: `POST`
+- **Description**: Complete a video upload, merge chunks, and extract audio.
+- **Parameters**:
+  - `uploadKey` (string): The unique key for the upload context.
+- **Response**:
+  - `videoUrl` (string): The URL to access the uploaded video.
+  - `transcribe` (array): An array of transcribed data.
+- **Example**:
+  ```http
+  POST /VideoUpload/UploadComplete?uploadKey=your_upload_key_here
+  ```
 
-Ensure that MongoDB is running locally on your machine. You can customize the MongoDB connection settings in the code.
+### Stream Video
 
-4. Start the API:
-
-```bash
- npm start
-```
-
-or use this for development mode
-
-```bash
-npm run dev
-```
-
-The API will start running on http://localhost:3500 or the port specified in your environment variables.
-
-## API Endpoints
-
-### Create a New Person
-
-- URL: /api
-- Method: POST
-- Request Body: JSON object with name properties
-- Response: JSON object with the created person's details
-
-### Retrieve a Person by ID
-
-- URL: /api/:id
-- Method: GET
-- Response: JSON object with the person's details or an error message if not found
-
-### Get all Person
-
-- URL: /api/get-all-persons
-- Method: GET
-- Response: An array of JSON object with the each person details or an error message if there no person
-
-### Update a Person by ID
-
-- URL: /api/:id
-- Method: PATCH
-- Request Body: JSON object with updated name and age
-- Response: JSON object with the updated person's details or an error message if not found
-
-### Delete a Person by ID
-
-- URL: /api/:id
-- Method: DELETE
-- Response: JSON message indicating successful deletion showing the person name and id or an error message if not found
+- **URL**: `/StreamVideo/{uploadKey}`
+- **Method**: `GET`
+- **Description**: Stream a video by providing the upload key.
+- **Parameters**:
+  - `uploadKey` (string): The unique key for the upload context.
+- **Response**: Video stream.
+- **Example**:
+  ```http
+  GET /VideoUpload/StreamVideo/your_upload_key_here
+  ```
 
 ## Error Handling
 
-The API handles errors gracefully, providing appropriate error messages and status codes for various scenarios.
+- If an error occurs, the API will return an error response with details in the `ErrorMessage` field.
+- HTTP status codes will indicate the success or failure of each request.
 
-## Dependencies
-
-- Express.js: A web application framework for Node.js.
-- Mongoose: An ODM (Object Data Modeling) library for MongoDB.
-- dotenv: For evn file.
-- express-async-handler: A middleware for handling exceptions inside of \* \* async express routes and passing them to express error handlers.
-- mongoose-sequence: To create fields which autoincrement their value.
-
-## Contributing
-
-Feel free to contribute to this project by opening issues or submitting pull requests.
+- PS: To test the audio play a sound on your system while recording
