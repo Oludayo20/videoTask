@@ -114,8 +114,16 @@ const transcribeVideo = async (videoPath, uploadKey) => {
       model: 'whisper-1'
     });
 
-    // Whisper API response contains the transcription result
-    console.log(transcription);
+    const transcriptionText = transcription.transcription; // Extracting the transcription content
+
+    // Specify the file path where you want to store the transcript
+    const transcriptFilePath = path.join(
+      downloadFolderPath,
+      `${uploadKey}.txt`
+    );
+
+    // Write the transcription content to the local disk
+    await fs.writeFile(transcriptFilePath, transcriptionText);
 
     // Delete the temporary audio file
     // fs.unlinkSync(audioFilePath);
@@ -128,6 +136,10 @@ const transcribeVideo = async (videoPath, uploadKey) => {
 };
 
 const streamBackVideo = async (req, res) => {
+  const { uploadKey } = req.params;
+
+  const videoFilePath = path.join(downloadFolderPath, `${uploadKey}.mp4`);
+
   const stat = fs.statSync(videoFilePath);
   const fileSize = stat.size;
   const range = req.headers.range;

@@ -16,6 +16,6 @@ const upload = multer({ storage: storage });
 router.post('/startUpload', startUpload);
 router.post('/uploadChunks', upload.single('chunkData'), uploadChunk);
 router.post('/uploadComplete', uploadComplete);
-router.get('/streamVideo', streamBackVideo);
+router.get('/streamVideo/:uploadKey', streamBackVideo);
 
 module.exports = router;
