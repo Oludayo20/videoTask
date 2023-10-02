@@ -16,12 +16,12 @@ const downloadFolderPath = path.join(userHomeDir, 'Downloads');
 
 // const receiveVideoChunks = async (req, res) => {
 //   try {
-//     const { videoId, isLastChunk, chunkIndex } = req.body;
+//     const { uploadKey, isLastChunk, chunkIndex } = req.body;
 //     const chunkData = req.file.buffer;
 //     const directoryPath = path.join(downloadFolderPath, 'uploads');
 //     const chunkFilePath = path.join(
 //       directoryPath,
-//       `${videoId}_${Date.now()}-${chunkIndex}.tmp`
+//       `${uploadKey}_${Date.now()}-${chunkIndex}.tmp`
 //     );
 
 //     if (!fsPromises.existsSync(directoryPath)) {
@@ -31,7 +31,7 @@ const downloadFolderPath = path.join(userHomeDir, 'Downloads');
 //     await fsPromises.writeFile(chunkFilePath, chunkData);
 
 //     if (isLastChunk) {
-//       const videoPath = path.join(downloadFolderPath, `${videoId}.mp4`);
+//       const videoPath = path.join(downloadFolderPath, `${uploadKey}.mp4`);
 //       const tempFiles = await fsPromises.readdir(directoryPath);
 
 //       // Sort temp files based on index
@@ -70,13 +70,13 @@ const downloadFolderPath = path.join(userHomeDir, 'Downloads');
 
 // const receiveVideoChunks = async (req, res) => {
 //   try {
-//     const { videoId, isLastChunk, chunkIndex } = req.body;
+//     const { uploadKey, isLastChunk, chunkIndex } = req.body;
 //     const chunkData = req.file.buffer;
 
 //     const directoryPath = path.join(downloadFolderPath, 'uploads');
 //     const chunkFilePath = path.join(
 //       directoryPath,
-//       `${videoId}_${Date.now()}-${chunkIndex}.tmp`
+//       `${uploadKey}_${Date.now()}-${chunkIndex}.tmp`
 //     );
 
 //     if (!fs.existsSync(directoryPath)) {
@@ -86,7 +86,7 @@ const downloadFolderPath = path.join(userHomeDir, 'Downloads');
 //     fs.writeFileSync(chunkFilePath, chunkData);
 
 //     if (isLastChunk) {
-//       const videoPath = path.join(downloadFolderPath, `${videoId}.mp4`);
+//       const videoPath = path.join(downloadFolderPath, `${uploadKey}.mp4`);
 //       const tempFiles = fs.readdirSync(directoryPath).sort((a, b) => {
 //         const indexA = parseInt(a.split('_')[1].split('.')[0]);
 //         const indexB = parseInt(b.split('_')[1].split('.')[0]);
@@ -109,7 +109,7 @@ const downloadFolderPath = path.join(userHomeDir, 'Downloads');
 //         //   .status(200)
 //         //   .json({ message: 'Video received and saved successfully' });
 
-//         await transcribeVideo(videoId, videoPath);
+//         await transcribeVideo(uploadKey, videoPath);
 //       });
 //     } else {
 //       res.status(200).json({ message: 'Chunk received successfully' });
@@ -120,21 +120,23 @@ const downloadFolderPath = path.join(userHomeDir, 'Downloads');
 //   }
 // };
 
-const generateVideoId = (req, res) => {
+const startUpload = (req, res) => {
+  const { fileName } = req.body;
+
   const randomId = Math.random().toString(36).substring(7);
-  const videoId = `helpMeOut-${randomId}`;
-  res.status(200).json({ videoId });
+  const uploadKey = `helpMeOut-${fileName}-${randomId}`;
+  res.status(200).json({ uploadKey });
 };
 
 const receiveVideoChunks = async (req, res) => {
   try {
-    const { videoId, isLastChunk, chunkIndex } = req.body;
+    const { uploadKey, isLastChunk, chunkIndex } = req.body;
     const chunkData = req.file.buffer;
     const directoryPath = path.join(downloadFolderPath, 'uploads');
 
     const chunkFilePath = path.join(
       directoryPath,
-      `${videoId}_${Date.now()}-${chunkIndex}.tmp`
+      `${uploadKey}_${Date.now()}-${chunkIndex}.tmp`
     );
 
     if (!fs.existsSync(directoryPath)) {
@@ -143,7 +145,7 @@ const receiveVideoChunks = async (req, res) => {
 
     await fs.writeFile(chunkFilePath, chunkData);
 
-    const outputFilePath = path.join(downloadFolderPath, `${videoId}.mp4`);
+    const outputFilePath = path.join(downloadFolderPath, `${uploadKey}.mp4`);
 
     if (isLastChunk) {
       const tempFiles = fs.readdirSync(directoryPath).sort((a, b) => {
@@ -167,7 +169,7 @@ const receiveVideoChunks = async (req, res) => {
           // fs.rmdirSync(directoryPath, { recursive: true });
           res.status(200).json({ message: 'Video transcription in process' });
 
-          transcribeVideo(outputFilePath, videoId);
+          transcribeVideo(outputFilePath, uploadKey);
 
           resolve;
         });
@@ -177,7 +179,7 @@ const receiveVideoChunks = async (req, res) => {
       //   // fs.rmdirSync(directoryPath, { recursive: true });
       //   res.status(200).json({ message: 'Video transcription in process' });
 
-      //   transcribeVideo(outputFilePath, videoId);
+      //   transcribeVideo(outputFilePath, uploadKey);
       // });
     } else {
       res.status(200).json({ message: 'Chunk received successfully' });
@@ -188,9 +190,9 @@ const receiveVideoChunks = async (req, res) => {
   }
 };
 
-const transcribeVideo = async (videoPath, videoId) => {
+const transcribeVideo = async (videoPath, uploadKey) => {
   // Convert video to audio (assuming videoPath is the path to the video file)
-  const audioFilePath = path.join(downloadFolderPath, `${videoId}.mp3`);
+  const audioFilePath = path.join(downloadFolderPath, `${uploadKey}.mp3`);
   await new Promise((resolve, reject) => {
     ffmpeg(videoPath)
       .toFormat('mp3')
@@ -250,7 +252,7 @@ const streamBackVideo = async (req, res) => {
 };
 
 module.exports = {
-  generateVideoId,
+  startUpload,
   receiveVideoChunks,
   streamBackVideo
 };

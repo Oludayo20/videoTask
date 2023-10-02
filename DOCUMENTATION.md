@@ -5,7 +5,7 @@ Welcome to the Video Upload API documentation for HNGxVideoStreaming. This API a
 
 ## Base URL
 
-The base URL for all API endpoints is `https://richkazz.bsite.net`.
+The base URL for all API endpoints is `https://blue-alert-caiman.cyclic.cloud/`.
 
 ## Endpoints
 

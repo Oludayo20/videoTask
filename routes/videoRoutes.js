@@ -1,7 +1,7 @@
 const express = require('express');
 const {
   receiveVideoChunks,
-  generateVideoId,
+  startUpload,
   streamBackVideo
 } = require('../controllers/videoController');
 
@@ -12,10 +12,10 @@ const multer = require('multer');
 const storage = multer.memoryStorage(); // Store files in memory as buffers
 const upload = multer({ storage: storage });
 
-router.get('/createVideo', generateVideoId);
-router.get('/streamVideo', generateVideoId);
+router.post('/startUpload', startUpload);
+// router.get('/streamVideo', generateVideoId);
 router.post(
-  '/uploadVideo/:videoId',
+  '/uploadVideo/:uploadKey',
   upload.single('chunkData'),
   receiveVideoChunks
 );
