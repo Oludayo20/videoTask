@@ -66,30 +66,6 @@ The base URL for all API endpoints is `https://blue-alert-caiman.cyclic.cloud/`.
   GET /VideoUpload/StreamVideo/your_upload_key_here
   ```
 
-### Delete Video
-
-- **URL**: `/DeleteVideo`
-- **Method**: `DELETE`
-- **Description**: Delete a video and associated data.
-- **Parameters**:
-  - `uploadKey` (string): The unique key for the upload context.
-- **Response**: Information about the deletion operation.
-- **Example**:
-  ```http
-  DELETE /VideoUpload/DeleteVideo?uploadKey=your_upload_key_here
-  ```
-
-### Get All Uploads
-
-- **URL**: `/get-all`
-- **Method**: `GET`
-- **Description**: Get a list of all uploaded videos and their associated data.
-- **Response**: A list of uploaded video contexts with links.
-- **Example**:
-  ```http
-  GET /VideoUpload/get-all
-  ```
-
 ## Error Handling
 
 - If an error occurs, the API will return an error response with details in the `ErrorMessage` field.
