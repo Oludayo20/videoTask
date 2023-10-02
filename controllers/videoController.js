@@ -138,34 +138,39 @@ const transcribeVideo = async (videoPath, uploadKey) => {
 const streamBackVideo = async (req, res) => {
   const { uploadKey } = req.params;
 
-  const videoFilePath = path.join(downloadFolderPath, `${uploadKey}.mp4`);
+  try {
+    const videoFilePath = path.join(downloadFolderPath, `${uploadKey}.mp4`);
 
-  const stat = fs.statSync(videoFilePath);
-  const fileSize = stat.size;
-  const range = req.headers.range;
+    const stat = fs.statSync(videoFilePath);
+    const fileSize = stat.size;
+    const range = req.headers.range;
 
-  if (range) {
-    const parts = range.replace(/bytes=/, '').split('-');
-    const start = parseInt(parts[0], 10);
-    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-    const chunksize = end - start + 1;
-    const file = fs.createReadStream(videoFilePath, { start, end });
-    const headers = {
-      'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-      'Accept-Ranges': 'bytes',
-      'Content-Length': chunksize,
-      'Content-Type': 'video/mp4'
-    };
+    if (range) {
+      const parts = range.replace(/bytes=/, '').split('-');
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      const chunksize = end - start + 1;
+      const file = fs.createReadStream(videoFilePath, { start, end });
+      const headers = {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunksize,
+        'Content-Type': 'video/mp4'
+      };
 
-    res.writeHead(206, headers);
-    file.pipe(res);
-  } else {
-    const headers = {
-      'Content-Length': fileSize,
-      'Content-Type': 'video/mp4'
-    };
-    res.writeHead(200, headers);
-    fs.createReadStream(videoFilePath).pipe(res);
+      res.writeHead(206, headers);
+      file.pipe(res);
+    } else {
+      const headers = {
+        'Content-Length': fileSize,
+        'Content-Type': 'video/mp4'
+      };
+      res.writeHead(200, headers);
+      fs.createReadStream(videoFilePath).pipe(res);
+    }
+  } catch (error) {
+    console.log('Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
 
