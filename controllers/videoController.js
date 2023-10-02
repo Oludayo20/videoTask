@@ -74,7 +74,7 @@ const uploadComplete = async (req, res) => {
         // fs.rmdirSync(directoryPath, { recursive: true });
         res.status(200).json({ message: 'Video transcription in process' });
 
-        transcribeVideo(outputFilePath, uploadKey);
+        // transcribeVideo(outputFilePath, uploadKey);
 
         resolve;
       });
@@ -137,6 +137,8 @@ const transcribeVideo = async (videoPath, uploadKey) => {
 
 const streamBackVideo = async (req, res) => {
   const { uploadKey } = req.params;
+
+  console.log(uploadKey);
 
   try {
     const videoFilePath = path.join(downloadFolderPath, `${uploadKey}.mp4`);
