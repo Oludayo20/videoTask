@@ -47,19 +47,14 @@ const transcriptVid = async (videoPath, uploadKey) => {
     });
 
     if (trans) {
-      // Send a success response to the client
-      res.status(201).json({
-        message: `New transcript with the uploadKey: ${uploadKey} created`
-      });
+      return trans;
     }
 
     // Delete the temporary files
     fs.unlinkSync(audioFilePath);
     fs.rmdirSync(chunkDirectoryPath, { recursive: true });
   } catch (error) {
-    console.log('Error:', error);
-
-    res.status(500).json({ error: 'Internal server error' });
+    throw error;
   }
 };
 
@@ -129,7 +124,11 @@ const uploadComplete = async (req, res) => {
 
     await new Promise((resolve) => {
       writeStream.on('finish', async () => {
-        await transcriptVid({ videoPath: outputFilePath, uploadKey });
+        const rTrans = await transcriptVid({
+          videoPath: outputFilePath,
+          uploadKey
+        });
+        console.log(rTrans);
       });
       resolve;
     });

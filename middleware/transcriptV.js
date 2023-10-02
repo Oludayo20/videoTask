@@ -31,7 +31,7 @@ const transcriptVideo = async (audioFilePath) => {
 
     return response.data;
   } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
+    throw error;
   }
 };
 
