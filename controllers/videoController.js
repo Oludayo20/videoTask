@@ -13,7 +13,8 @@ const openai = new OpenAIApi({
 
 const userHomeDir = os.homedir();
 const downloadFolderPath = path.join(userHomeDir, 'Downloads');
-const directoryPath = path.join(downloadFolderPath, 'uploads');
+const chunkDirectoryPath = path.join(downloadFolderPath, 'uploads');
+const videoDirectoryPath = path.join(downloadFolderPath, 'helpMeOut');
 
 const startUpload = (req, res) => {
   const { fileName } = req.body;
@@ -29,12 +30,12 @@ const uploadChunk = async (req, res) => {
     const chunkData = req.file.buffer;
 
     const chunkFilePath = path.join(
-      directoryPath,
+      chunkDirectoryPath,
       `${uploadKey}_${Date.now()}-${chunkIndex}.tmp`
     );
 
-    if (!fs.existsSync(directoryPath)) {
-      await fs.mkdir(directoryPath, { recursive: true });
+    if (!fs.existsSync(chunkDirectoryPath)) {
+      await fs.mkdir(chunkDirectoryPath, { recursive: true });
     }
 
     await fs.writeFile(chunkFilePath, chunkData);
@@ -51,9 +52,9 @@ const uploadComplete = async (req, res) => {
   console.log(req.body);
 
   try {
-    const outputFilePath = path.join(downloadFolderPath, `${uploadKey}.mp4`);
+    const outputFilePath = path.join(videoDirectoryPath, `${uploadKey}.mp4`);
 
-    const tempFiles = fs.readdirSync(directoryPath).sort((a, b) => {
+    const tempFiles = fs.readdirSync(chunkDirectoryPath).sort((a, b) => {
       const indexA = parseInt(a.split('_')[1].split('.')[0]);
       const indexB = parseInt(b.split('_')[1].split('.')[0]);
       return indexA - indexB;
@@ -62,24 +63,23 @@ const uploadComplete = async (req, res) => {
     const writeStream = fs.createWriteStream(outputFilePath);
 
     for (const tempFile of tempFiles) {
-      const data = fs.readFileSync(path.join(directoryPath, tempFile));
+      const data = fs.readFileSync(path.join(chunkDirectoryPath, tempFile));
       await writeStream.write(data);
-      // fs.unlinkSync(path.join(directoryPath, tempFile));
     }
 
     writeStream.end();
 
     await new Promise((resolve) => {
       writeStream.on('finish', async () => {
-        await transcribeVideo(outputFilePath, uploadKey);
+        await transcribeVideo({ videoPath: outputFilePath, uploadKey });
 
         resolve;
       });
     });
 
-    // res
-    //   .status(200)
-    //   .json({ message: 'video transcript and saved successfully' });
+    res
+      .status(200)
+      .json({ message: 'video transcript and saved successfully' });
   } catch (error) {
     console.log('Error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -129,7 +129,7 @@ const transcribeVideo = async (videoPath, uploadKey) => {
 
     // Delete the temporary files
     fs.unlinkSync(audioFilePath);
-    fs.rmdirSync(directoryPath, { recursive: true });
+    fs.rmdirSync(chunkDirectoryPath, { recursive: true });
   } catch (error) {
     console.log('Error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -138,7 +138,7 @@ const transcribeVideo = async (videoPath, uploadKey) => {
 
 const streamBackVideo = async (req, res) => {
   const { uploadKey } = req.params;
-  const videoFilePath = path.join(downloadFolderPath, `${uploadKey}.mp4`);
+  const videoFilePath = path.join(videoDirectoryPath, `${uploadKey}.mp4`);
 
   try {
     const range = req.headers.range;
