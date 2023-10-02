@@ -70,11 +70,11 @@ const uploadComplete = async (req, res) => {
     writeStream.end();
 
     await new Promise((resolve) => {
-      writeStream.on('finish', () => {
+      writeStream.on('finish', async () => {
         // fs.rmdirSync(directoryPath, { recursive: true });
         res.status(200).json({ message: 'Video transcription in process' });
 
-        // transcribeVideo(outputFilePath, uploadKey);
+        await transcribeVideo(outputFilePath, uploadKey);
 
         resolve;
       });
@@ -97,7 +97,6 @@ const uploadComplete = async (req, res) => {
 };
 
 const transcribeVideo = async (videoPath, uploadKey) => {
-  // Convert video to audio (assuming videoPath is the path to the video file)
   const audioFilePath = path.join(downloadFolderPath, `${uploadKey}.wav`);
   await new Promise((resolve, reject) => {
     ffmpeg(videoPath)
