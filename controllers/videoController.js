@@ -8,7 +8,7 @@ ffmpeg.setFfmpegPath(ffmpegPath);
 
 const OpenAIApi = require('openai');
 const openai = new OpenAIApi({
-  apiKey: 'process.env.API_KEY'
+  apiKey: process.env.API_KEY
 });
 
 const userHomeDir = os.homedir();
@@ -77,9 +77,9 @@ const uploadComplete = async (req, res) => {
       });
     });
 
-    res
-      .status(200)
-      .json({ message: 'video transcript and saved successfully' });
+    // res
+    //   .status(200)
+    //   .json({ message: 'video transcript and saved successfully' });
   } catch (error) {
     console.log('Error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -138,53 +138,35 @@ const transcribeVideo = async (videoPath, uploadKey) => {
 
 const streamBackVideo = async (req, res) => {
   const { uploadKey } = req.params;
+  const videoFilePath = path.join(downloadFolderPath, `${uploadKey}.mp4`);
 
   try {
-    const videoFilePath = path.join(downloadFolderPath, `${uploadKey}.mp4`);
+    const range = req.headers.range;
+    const videoSize = fs.statSync(videoFilePath).size;
+    const chunkSize = 1 * 1e6;
+    const start = Number(range.replace(/\D/g, ''));
+    const end = Math.min(start + chunkSize, videoSize - 1);
+    const videoLength = end - start + 1;
+    const headers = {
+      'Content-Range': `bytes ${start}-${end}/${videoSize}`,
+      'Accept-Ranges': 'bytes',
+      'Content-Length': videoLength,
+      'Content-Type': 'video/mp4' // Corrected Content-Type to 'video/mp4'
+    };
+
     const transcript = await Transcript.findOne({ uploadKey })
       .collation({ locale: 'en', strength: 2 })
       .lean()
       .exec();
 
-    const stat = fs.statSync(videoFilePath);
-    const fileSize = stat.size;
-    const range = req.headers.range;
+    res.writeHead(206, headers);
+    // First, send the transcript data as a JSON object
+    res.write(JSON.stringify({ transcript }));
 
-    if (range) {
-      const parts = range.replace(/bytes=/, '').split('-');
-      const start = parseInt(parts[0], 10);
-      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-      const chunksize = end - start + 1;
-      const file = fs.createReadStream(videoFilePath, { start, end });
-      const headers = {
-        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-        'Accept-Ranges': 'bytes',
-        'Content-Length': chunksize,
-        'Content-Type': 'video/mp4'
-      };
-
-      res.writeHead(206, headers);
-
-      // First, send the transcript data as a JSON object
-      res.write(JSON.stringify({ transcript }));
-
-      // Then, send the video file
-      file.pipe(res);
-    } else {
-      const headers = {
-        'Content-Length': fileSize,
-        'Content-Type': 'video/mp4'
-      };
-      res.writeHead(200, headers);
-
-      // First, send the transcript data as a JSON object
-      res.write(JSON.stringify({ transcript }));
-
-      // Then, send the video file
-      fs.createReadStream(videoFilePath).pipe(res);
-    }
+    const stream = fs.createReadStream(videoFilePath, { start, end });
+    stream.pipe(res);
   } catch (error) {
-    console.log('Error:', error);
+    console.error('Error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
