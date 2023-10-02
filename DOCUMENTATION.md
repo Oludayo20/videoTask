@@ -1,141 +1,263 @@
-## API Documentation
+````markdown
+# Video Upload API Documentation
 
-### Base URL
+Welcome to the Video Upload API documentation for HNGxVideoStreaming. This API allows you to manage video uploads, transcriptions, and streaming. Below are the available endpoints and their descriptions.
 
-The base URL for this API is `https://github.com/Oludayo20/hngx-task-two`.
+## Base URL
 
-### Endpoints
+The base URL for all API endpoints is `https://richkazz.bsite.net`.
 
-#### 1. Get All Persons
+## Endpoints
 
-- **URL**: `/get-all-persons`
-- **HTTP Method**: GET
-- **Description**: Retrieves a list of all persons.
+### Start Video Upload
+
+- **URL**: `/startUpload`
+- **Method**: `POST`
+- **Description**: Start a new video upload operation.
 - **Parameters**:
-  - None
+  - `fileName` (string): The name of the file to upload.
 - **Response**:
-  - Status Code: 200 (OK)
-  - Content Type: `application/json`
-  - Response Body: A list of `Person` objects.
+  - `uploadKey` (string): A unique key for the upload context.
 - **Example**:
-  ```json
-  [
-    {
-      "id": 123456789,
-      "name": "John Doo"
-    },
-    {
-      "id": 245864327,
-      "name": "Oludayo Elijah"
-    }
-  ]
+  ```http
+  POST /VideoUpload/startUpload?fileName=myvideo.mp4
   ```
+````
 
-#### 2. Get Person by ID
+### Upload Video Chunks
 
-- **URL**: `/{id}`
-- **HTTP Method**: GET
-- **Description**: Retrieves a person by their ID.
+- **URL**: `/UploadChunks`
+- **Method**: `POST`
+- **Description**: Upload video chunks for an ongoing upload operation.
 - **Parameters**:
-  - `id` (Path Parameter) - The ID of the person to retrieve.
-- **Response**:
-  - Status Code: 200 (OK) if the person is found.
-  - Status Code: 404 (Not Found) if the person is not found.
-  - Content Type: `application/json`
-  - Response Body: A `Person` object if found.
-- **Example (Found)**:
-  ```json
-  {
-    "id": 245864327,
-    "name": "Oludayo Elijah"
-  }
-  ```
-- **Example (Not Found)**:
-  ```json
-  {
-    "error": "Person not found"
-  }
+  - `uploadKey` (string): The unique key for the upload context.
+- **Request Body**: Binary video chunk data.
+- **Response**: Information about the upload operation.
+- **Example**:
+  ```http
+  POST /VideoUpload/UploadChunks?uploadKey=your_upload_key_here
   ```
 
-#### 3. Create a New Person
+### Complete Video Upload
 
-- **URL**: `/`
-- **HTTP Method**: POST
-- **Description**: Creates a new person.
+- **URL**: `/UploadComplete`
+- **Method**: `POST`
+- **Description**: Complete a video upload, merge chunks, and extract audio.
 - **Parameters**:
-  - Request Body (JSON) - A `PersonRequest` object with a `Name` field.
+  - `uploadKey` (string): The unique key for the upload context.
 - **Response**:
-  - Status Code: 201 (Created) if the person is created successfully.
-  - Status Code: 400 (Bad Request) if the request is invalid (e.g., missing or empty `Name`).
-  - Content Type: `application/json`
-  - Response Body: A `Person` object representing the newly created person.
-- **Example (Created)**:
-  ```json
-  {
-    "id": 245864327,
-    "name": "Oludayo Elijah"
-  }
-  ```
-- **Example (Bad Request)**:
-  ```json
-  {
-    "error": "Person name is required."
-  }
+  - `videoUrl` (string): The URL to access the uploaded video.
+  - `transcribe` (array): An array of transcribed data.
+- **Example**:
+  ```http
+  POST /VideoUpload/UploadComplete?uploadKey=your_upload_key_here
   ```
 
-#### 4. Update an Existing Person
+### Stream Video
 
-- **URL**: `/{id}`
-- **HTTP Method**: PUT
-- **Description**: Updates an existing person.
+- **URL**: `/StreamVideo/{uploadKey}`
+- **Method**: `GET`
+- **Description**: Stream a video by providing the upload key.
 - **Parameters**:
-  - Request Body (JSON) - A `Person` object with an `Id` and a `Name` field.
-- **Response**:
-  - Status Code: 200 (OK) if the person is updated successfully.
-  - Status Code: 404 (Not Found) if the person with the specified ID is not found.
-  - Status Code: 400 (Bad Request) if the request is invalid (e.g., missing or empty `Name`, or `Id` is 0).
-  - Content Type: `application/json`
-  - Response Body: A `Person` object representing the updated person if successful.
-- **Example (Updated)**:
-  ```json
-  {
-    "id": 245864327,
-    "name": "Oludayo Elijah"
-  }
-  ```
-- **Example (Not Found)**:
-  ```json
-  {
-    "error": "Person not found."
-  }
-  ```
-- **Example (Bad Request)**:
-  ```json
-  {
-    "message": "Id and name are required"
-  }
+  - `uploadKey` (string): The unique key for the upload context.
+- **Response**: Video stream.
+- **Example**:
+  ```http
+  GET /VideoUpload/StreamVideo/your_upload_key_here
   ```
 
-#### 5. Delete a Person by ID
+### Delete Video
 
-- **URL**: `/{id}`
-- **HTTP Method**: DELETE
-- **Description**: Deletes a person by their ID.
+- **URL**: `/DeleteVideo`
+- **Method**: `DELETE`
+- **Description**: Delete a video and associated data.
 - **Parameters**:
-  - `id` (Path Parameter) - The ID of the person to delete.
-- **Response**:
-  - Status Code: 200 (OK) if the person is deleted successfully.
-  - Status Code: 404 (Not Found) if the person with the specified ID is not found.
-- **Example (Deleted)**:
-  ```json
-  {
-    "message": "John Doo with ID 650321fe2239237 deleted"
-  }
+  - `uploadKey` (string): The unique key for the upload context.
+- **Response**: Information about the deletion operation.
+- **Example**:
+  ```http
+  DELETE /VideoUpload/DeleteVideo?uploadKey=your_upload_key_here
   ```
-- **Example (Not Found)**:
-  ```json
-  {
-    "error": "Person not found."
-  }
+
+### Get All Uploads
+
+- **URL**: `/get-all`
+- **Method**: `GET`
+- **Description**: Get a list of all uploaded videos and their associated data.
+- **Response**: A list of uploaded video contexts with links.
+- **Example**:
+  ```http
+  GET /VideoUpload/get-all
   ```
-- **PS hosted link:** https://hngx-8fg7.onrender.com/api/
+
+## Error Handling
+
+- If an error occurs, the API will return an error response with details in the `ErrorMessage` field.
+- HTTP status codes will indicate the success or failure of each request.
+
+## A HTML and JavaScript code example
+
+- steps to start
+- click on start upload to get key
+- click on initiate Recording
+- click on Start Recording
+- after some minutes click on Stop Recording
+- check the console for the response url to the video and transcript
+  <html>
+  <head>
+      <meta charset="UTF-8" />
+      <title>Screen Recording with client
+          side javascript</title>
+  </head>
+  <body>
+
+      <button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+      <button class="start-btn">Start Recording</button>
+      <button class="stop-btn">Stop Recording</button>
+      <button class="btn btn-primary" onclick="rec()" id="startButton">initiate Recording</button>
+      <button class="btn btn-primary" id="start button" onclick="startUpload('karo')">start upload to get key</button>
+      <div id="resopnseId"></div>
+      <script>
+          var uploadKey = "";
+          var baseApiUrl = "https://richkazz.bsite.net";
+          var start = document.querySelector('.start-btn');
+          var stop = document.querySelector('.stop-btn');
+          async function startUpload(fileName) {
+              const requestUri = `${baseApiUrl}/VideoUpload/startUpload?fileName=${fileName}`;
+              const response = await fetch(requestUri, {
+                  method: 'POST'
+              });
+              var res = await response.json();
+              uploadKey = res.data.uploadKey;
+              console.log(res);
+              return res;
+          }
+
+          async function uploadChunks(uploadKey, chunkData) {
+              const requestUri = `${baseApiUrl}/VideoUpload/UploadChunks?uploadKey=${uploadKey}`;
+              const response = await fetch(requestUri, {
+                  method: 'POST',
+                  body: chunkData
+              });
+              return await response.json();;
+          }
+
+          async function uploadComplete(uploadKey) {
+              const requestUri = `${baseApiUrl}/VideoUpload/UploadComplete?uploadKey=${uploadKey}`;
+              const response = await fetch(requestUri, {
+                  method: 'POST'
+              });
+              var res = await response.json();
+              document.getElementById("resopnseId").innerHTML = res.data.videoUrl;
+              console.log(res);
+              return response;;
+          }
+
+          const record = document.getElementById("startButton");
+          let videoId = undefined;
+          // Function to convert a Blob to a byte array
+          function blobToByteArray(blob, callback) {
+              const reader = new FileReader();
+
+              reader.onload = function (event) {
+                  const arrayBuffer = event.target.result;
+                  const byteArray = new Uint8Array(arrayBuffer);
+                  callback(byteArray);
+              };
+
+              reader.readAsArrayBuffer(blob);
+          }
+          // Function to start screen recording
+
+          var data = [];
+          var isUploadComplete = false;
+          function rec() {
+              const gdmOptions = {
+                  video: {
+                      displaySurface: "window",
+                  },
+                  audio: {
+                      echoCancellation: true,
+                      noiseSuppression: true,
+                      sampleRate: 44100,
+                      suppressLocalAudioPlayback: true,
+                  },
+                  surfaceSwitching: "include",
+                  selfBrowserSurface: "exclude",
+                  systemAudio: "exclude",
+              };
+              // In order record the screen with system audio
+              var recording = navigator.mediaDevices.getDisplayMedia({
+                  video: {
+                      mediaSource: 'screen',
+                  },
+                  audio: true,
+              })
+                  .then(async (e) => {
+
+                      // For recording the mic audio
+                      let audio = await navigator.mediaDevices.getUserMedia({
+                          audio: true, video: false
+                      })
+
+
+
+                      // Combine both video/audio stream with MediaStream object
+                      let combine = new MediaStream(
+                          [...e.getTracks(), ...audio.getTracks()])
+
+                      /* Record the captured mediastream
+                      with MediaRecorder constructor */
+                      let recorder = new MediaRecorder(combine);
+
+                      start.addEventListener('click', (e) => {
+
+                          // Starts the recording when clicked
+                          recorder.start(4000);
+                          alert("recording started")
+
+                          // For a fresh start
+                          data = []
+                      });
+
+                      stop.addEventListener('click', (e) => {
+
+                          // Stops the recording
+                          recorder.stop();
+                          alert("recording stopped")
+                      });
+
+                      /* Push the recorded data to data array
+                      when data available */
+                      recorder.ondataavailable = (e) => {
+                          data.push(e.data);
+
+                          blobToByteArray(e.data, (arr) => {
+                              console.log(arr);
+                              uploadChunks(uploadKey, arr).then(() => {
+                                  if(isUploadComplete){
+                                      var result = uploadComplete(uploadKey);
+                                  }
+
+                                  console.log(result);
+                              });
+                          })
+                      };
+                      recorder.onstop = () => {
+
+                          /* Convert the recorded audio to
+                          blob type mp4 media */
+                          let blobData = new Blob(data, { type: 'video/mp4' });
+                          isUploadComplete = true;
+
+                      };
+                  });
+
+          }
+      </script>
+
+  </body>
+
+</html>
+
+- PS: To test the audio play a sound on your system while recording
