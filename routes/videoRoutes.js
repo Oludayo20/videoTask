@@ -14,7 +14,7 @@ const storage = multer.memoryStorage(); // Store files in memory as buffers
 const upload = multer({ storage: storage });
 
 router.post('/startUpload', startUpload);
-router.post('/uploadChunk', upload.single('chunkData'), uploadChunk);
+router.post('/uploadChunks', upload.single('chunkData'), uploadChunk);
 router.post('/uploadComplete', uploadComplete);
 router.get('/streamVideo', streamBackVideo);
 
