@@ -12,8 +12,13 @@ const downloadFolderPath = path.join(userHomeDir, 'Downloads');
 const chunkDirectoryPath = path.join(downloadFolderPath, 'uploads');
 const videoDirectoryPath = path.join(downloadFolderPath, 'helpMeOut');
 
-const transcriptVid = async (videoPath, uploadKey) => {
+const transcriptVid = async ({ videoPath, uploadKey }) => {
+  console.log(videoPath);
+  console.log('key', uploadKey);
+
   const audioFilePath = path.join(downloadFolderPath, `${uploadKey}.mp3`);
+
+  console.log('mp3', audioFilePath);
 
   // Check for duplicate uploadKey
   const duplicateUploadKey = await Transcript.findOne({ uploadKey })
@@ -124,9 +129,10 @@ const uploadComplete = async (req, res) => {
 
     await new Promise((resolve) => {
       writeStream.on('finish', async () => {
+        console.log('k1', uploadKey);
         const rTrans = await transcriptVid({
           videoPath: outputFilePath,
-          uploadKey
+          uploadKey: uploadKey
         });
         console.log(rTrans);
       });
