@@ -5,7 +5,7 @@ Welcome to the Video Upload API documentation for HNGxVideoStreaming. This API a
 
 ## Base URL
 
-The base URL for all API endpoints is `https://blue-alert-caiman.cyclic.cloud/`.
+The base URL for all API endpoints is `https://blue-alert-caiman.cyclic.cloud/api`.
 
 ## Endpoints
 
@@ -14,13 +14,13 @@ The base URL for all API endpoints is `https://blue-alert-caiman.cyclic.cloud/`.
 - **URL**: `/startUpload`
 - **Method**: `POST`
 - **Description**: Start a new video upload operation.
-- **Parameters**:
+- **Request Body**:
   - `fileName` (string): The name of the file to upload.
 - **Response**:
   - `uploadKey` (string): A unique key for the upload context.
 - **Example**:
   ```http
-  POST /VideoUpload/startUpload?fileName=myvideo.mp4
+  POST /video/startUpload?fileName=myvideo.mp4
   ```
 ````
 
@@ -29,13 +29,12 @@ The base URL for all API endpoints is `https://blue-alert-caiman.cyclic.cloud/`.
 - **URL**: `/UploadChunks`
 - **Method**: `POST`
 - **Description**: Upload video chunks for an ongoing upload operation.
-- **Parameters**:
-  - `uploadKey` (string): The unique key for the upload context.
-- **Request Body**: Binary video chunk data.
+- **Request Body**:
+  - `uploadKey` (string): The unique key for the upload context and Binary video chunk data.
 - **Response**: Information about the upload operation.
 - **Example**:
   ```http
-  POST /VideoUpload/UploadChunks?uploadKey=your_upload_key_here
+  POST /video/UploadChunks?uploadKey=your_upload_key_here
   ```
 
 ### Complete Video Upload
@@ -50,7 +49,7 @@ The base URL for all API endpoints is `https://blue-alert-caiman.cyclic.cloud/`.
   - `transcribe` (array): An array of transcribed data.
 - **Example**:
   ```http
-  POST /VideoUpload/UploadComplete?uploadKey=your_upload_key_here
+  POST /video/UploadComplete?uploadKey=your_upload_key_here
   ```
 
 ### Stream Video
@@ -62,8 +61,20 @@ The base URL for all API endpoints is `https://blue-alert-caiman.cyclic.cloud/`.
   - `uploadKey` (string): The unique key for the upload context.
 - **Response**: Video stream.
 - **Example**:
+
   ```http
-  GET /VideoUpload/StreamVideo/your_upload_key_here
+  GET /video/StreamVideo/your_upload_key_here
+  ```
+
+  ### Stream All Video
+
+- **URL**: `/StreamAllVideo`
+- **Method**: `GET`
+- **Description**: Stream a video by providing the upload key.
+- **Response**: Video stream.
+- **Example**:
+  ```http
+  GET /video/StreamAllVideo
   ```
 
 ## Error Handling
