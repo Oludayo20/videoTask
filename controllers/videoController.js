@@ -5,11 +5,11 @@ const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
 const ffmpeg = require('fluent-ffmpeg');
 ffmpeg.setFfmpegPath(ffmpegPath);
 
-const OpenAI = require('openai');
-
-const openAi = new OpenAI({
-  apiKey: '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'
+const OpenAIApi = require('openai');
+const openai = new OpenAIApi({
+  apiKey: 'process.env.API_KEY'
 });
+// const openai = new OpenAIApi(configuration);
 
 const userHomeDir = os.homedir();
 const downloadFolderPath = path.join(userHomeDir, 'Downloads');
@@ -98,23 +98,27 @@ const uploadComplete = async (req, res) => {
 
 const transcribeVideo = async (videoPath, uploadKey) => {
   // Convert video to audio (assuming videoPath is the path to the video file)
-  const audioFilePath = path.join(downloadFolderPath, `${uploadKey}.mp3`);
+  const audioFilePath = path.join(downloadFolderPath, `${uploadKey}.wav`);
   await new Promise((resolve, reject) => {
     ffmpeg(videoPath)
-      .toFormat('mp3')
+      .toFormat('wav')
       .on('end', resolve)
       .on('error', reject)
       .save(audioFilePath);
   });
 
   try {
-    console.log(audioFilePath);
-    const transcription = await openAi.audio.transcription.create({
-      file: audioFilePath,
-      model: 'whisper-1'
-    });
+    const transcript = await openai.createTranscription(
+      fs.createReadStream(filename),
+      'whisper-1'
+    );
 
-    const transcriptionText = transcription.transcription; // Extracting the transcription content
+    const transcriptionText = transcript.data; // Extracting the transcription content
+
+    // Create a JSON object to hold the transcript
+    const transcriptData = {
+      transcript: transcriptionText
+    };
 
     // Specify the file path where you want to store the transcript
     const transcriptFilePath = path.join(
@@ -122,13 +126,16 @@ const transcribeVideo = async (videoPath, uploadKey) => {
       `${uploadKey}.txt`
     );
 
-    // Write the transcription content to the local disk
-    await fs.writeFile(transcriptFilePath, transcriptionText);
+    // Write the transcript content to the local disk
+    await fs.writeFile(
+      transcriptFilePath,
+      JSON.stringify(transcriptData, null, 2)
+    );
 
     // Delete the temporary audio file
     // fs.unlinkSync(audioFilePath);
 
-    // res.status(200).json({ transcription: transcriptionResult });
+    res.status(200).json({ message: 'transcription done' });
   } catch (error) {
     console.log('Error:', error);
     res.status(500).json({ error: 'Internal server error' });
