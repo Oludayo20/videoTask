@@ -2,21 +2,17 @@ const fs = require('fs-extra');
 const path = require('path');
 const os = require('os');
 const Transcript = require('../models/Transcript');
+const { transcriptVideo } = require('../middleware/transcriptV');
 const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
 const ffmpeg = require('fluent-ffmpeg');
 ffmpeg.setFfmpegPath(ffmpegPath);
-
-const OpenAIApi = require('openai');
-const openai = new OpenAIApi({
-  apiKey: process.env.API_KEY
-});
 
 const userHomeDir = os.homedir();
 const downloadFolderPath = path.join(userHomeDir, 'Downloads');
 const chunkDirectoryPath = path.join(downloadFolderPath, 'uploads');
 const videoDirectoryPath = path.join(downloadFolderPath, 'helpMeOut');
 
-const transcribeVideo = async (videoPath, uploadKey) => {
+const transcriptVid = async (videoPath, uploadKey, res) => {
   const audioFilePath = path.join(downloadFolderPath, `${uploadKey}.mp3`);
 
   // Check for duplicate uploadKey
@@ -26,33 +22,32 @@ const transcribeVideo = async (videoPath, uploadKey) => {
     .exec();
 
   if (duplicateUploadKey) {
-    return res.status(409).json({ message: 'Transcript already exist' });
+    return res.status(409).json({ message: 'Transcript already exists' });
   }
 
-  await new Promise((resolve, reject) => {
+  try {
     ffmpeg(videoPath)
       .toFormat('mp3')
-      .on('end', resolve)
-      .on('error', reject)
+      .on('end', () => {
+        console.log('Conversion finished successfully');
+        resolve();
+      })
+      .on('error', (err) => {
+        console.error('Error:', err);
+        reject(err);
+      })
       .save(audioFilePath);
-  });
 
-  try {
-    const transcript = await openai.audio.transcriptions.create({
-      file: fs.createReadStream(audioFilePath),
-      model: 'whisper-1'
-    });
-
-    const transcriptionText = transcript.data; // Extracting the transcription content
+    const transcript = transcriptVideo(audioFilePath);
 
     // Create and store new transcript
     const trans = await Transcript.create({
-      transcript: transcriptionText,
+      transcript,
       uploadKey
     });
 
     if (trans) {
-      //created
+      // Send a success response to the client
       res.status(201).json({
         message: `New transcript with the uploadKey: ${uploadKey} created`
       });
@@ -60,9 +55,9 @@ const transcribeVideo = async (videoPath, uploadKey) => {
 
     // Delete the temporary files
     fs.unlinkSync(audioFilePath);
-    fs.rmdirSync(chunkDirectoryPath, { recursive: true });
   } catch (error) {
     console.log('Error:', error);
+
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -79,6 +74,10 @@ const uploadChunk = async (req, res) => {
   try {
     const { uploadKey, chunkIndex } = req.body;
     const chunkData = req.file.buffer;
+
+    if (!uploadKey && chunkIndex && chunkData) {
+      res.status(400).json({ error: 'Data not complete' });
+    }
 
     const chunkFilePath = path.join(
       chunkDirectoryPath,
@@ -100,6 +99,17 @@ const uploadChunk = async (req, res) => {
 
 const uploadComplete = async (req, res) => {
   const { uploadKey } = req.body;
+
+  console.log(req.body);
+
+  if (!uploadKey) {
+    res.status(400).json({ error: 'No uploadKey' });
+  }
+
+  if (!fs.existsSync(videoDirectoryPath)) {
+    await fs.mkdir(videoDirectoryPath, { recursive: true });
+  }
+
   try {
     const outputFilePath = path.join(videoDirectoryPath, `${uploadKey}.mp4`);
 
@@ -120,10 +130,9 @@ const uploadComplete = async (req, res) => {
 
     await new Promise((resolve) => {
       writeStream.on('finish', async () => {
-        await transcribeVideo({ videoPath: outputFilePath, uploadKey });
-
-        resolve;
+        await transcriptVid({ videoPath: outputFilePath, uploadKey });
       });
+      resolve;
     });
 
     res
