@@ -45,10 +45,11 @@ const transcribeVideo = async (videoPath, uploadKey) => {
 
     const transcriptionText = transcript.data; // Extracting the transcription content
 
-    console.log(transcriptionText);
-
     // Create and store new transcript
-    const trans = await Transcript.create(userObject);
+    const trans = await Transcript.create({
+      transcript: transcriptionText,
+      uploadKey
+    });
 
     if (trans) {
       //created
