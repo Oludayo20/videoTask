@@ -171,32 +171,43 @@ const streamBackVideo = async (req, res) => {
 
 const streamAllVideos = async (req, res) => {
   try {
-    const tempFiles = fs.readdirSync(videoDirectoryPath).sort((a, b) => {
+    const videoFiles = fs.readdirSync(videoDirectoryPath).sort((a, b) => {
       const indexA = parseInt(a.split('_')[1].split('.')[0]);
       const indexB = parseInt(b.split('_')[1].split('.')[0]);
       return indexA - indexB;
     });
 
-    for (const tempFile of tempFiles) {
-      const videoFilePath = path.join(videoDirectoryPath, tempFile);
+    for (const videoFile of videoFiles) {
       const range = req.headers.range;
-      const videoSize = fs.statSync(videoFilePath).size;
-      const chunkSize = 1 * 1e6;
-      const start = Number(range.replace(/\D/g, ''));
-      const end = Math.min(start + chunkSize, videoSize - 1);
-      const videoLength = end - start + 1;
-      const headers = {
-        'Content-Range': `bytes ${start}-${end}/${videoSize}`,
-        'Accept-Ranges': 'bytes',
-        'Content-Length': videoLength,
-        'Content-Type': 'video/mp4'
-      };
+      const stat = fs.statSync(videoFile);
+      const fileSize = stat.size;
+      if (range) {
+        const parts = range.replace(/bytes=/, '').split('-');
+        const start = parseInt(parts[0], 10);
+        const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+        const chunkSize = end - start + 1;
 
-      res.writeHead(206, headers);
-      // First, send the transcript data as a JSON object
+        const file = fs.createReadStream(videoFile, { start, end });
 
-      const stream = fs.createReadStream(videoFilePath, { start, end });
-      stream.pipe(res);
+        const headers = {
+          'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+          'Accept-Ranges': 'bytes',
+          'Content-Length': chunkSize,
+          'Content-Type': 'video/mp4'
+        };
+
+        res.writeHead(206, headers);
+        file.pipe(res);
+      } else {
+        const head = {
+          'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+          'Accept-Ranges': 'bytes',
+          'Content-Length': chunkSize,
+          'Content-Type': 'video/mp4'
+        };
+        res.writeHead(200, head);
+        fs.createReadStream(videoFile).pipe(res);
+      }
     }
 
     const transcript = await Transcript.find().lean();
