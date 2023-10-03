@@ -20,7 +20,7 @@ The base URL for all API endpoints is `https://blue-alert-caiman.cyclic.cloud/ap
   - `uploadKey` (string): A unique key for the upload context.
 - **Example**:
   ```http
-  POST /video/startUpload?fileName=myvideo.mp4
+  POST /video/startUpload
   ```
 ````
 
@@ -34,7 +34,7 @@ The base URL for all API endpoints is `https://blue-alert-caiman.cyclic.cloud/ap
 - **Response**: Information about the upload operation.
 - **Example**:
   ```http
-  POST /video/UploadChunks?uploadKey=your_upload_key_here
+  POST /video/UploadChunks
   ```
 
 ### Complete Video Upload
@@ -42,14 +42,13 @@ The base URL for all API endpoints is `https://blue-alert-caiman.cyclic.cloud/ap
 - **URL**: `/UploadComplete`
 - **Method**: `POST`
 - **Description**: Complete a video upload, merge chunks, and extract audio.
-- **Parameters**:
+- **Request Body**:
   - `uploadKey` (string): The unique key for the upload context.
 - **Response**:
-  - `videoUrl` (string): The URL to access the uploaded video.
-  - `transcribe` (array): An array of transcribed data.
+  - `message`
 - **Example**:
   ```http
-  POST /video/UploadComplete?uploadKey=your_upload_key_here
+  POST /video/UploadComplete
   ```
 
 ### Stream Video
