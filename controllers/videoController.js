@@ -133,29 +133,36 @@ const streamBackVideo = async (req, res) => {
 
   try {
     const range = req.headers.range;
-    const videoSize = fs.statSync(videoFilePath).size;
-    const chunkSize = 1 * 1e6;
-    const start = Number(range.replace(/\D/g, ''));
-    const end = Math.min(start + chunkSize, videoSize - 1);
-    const videoLength = end - start + 1;
-    const headers = {
-      'Content-Range': `bytes ${start}-${end}/${videoSize}`,
-      'Accept-Ranges': 'bytes',
-      'Content-Length': videoLength,
-      'Content-Type': 'video/mp4'
-    };
+    const stat = fs.statSync(videoFilePath);
+    const fileSize = stat.size;
 
-    const transcript = await Transcript.findOne({ uploadKey })
-      .collation({ locale: 'en', strength: 2 })
-      .lean()
-      .exec();
+    if (range) {
+      const parts = range.replace(/bytes=/, '').split('-');
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      const chunkSize = end - start + 1;
 
-    res.writeHead(206, headers);
-    // First, send the transcript data as a JSON object
-    res.write(JSON.stringify({ transcript }));
+      const file = fs.createReadStream(videoFilePath, { start, end });
 
-    const stream = fs.createReadStream(videoFilePath, { start, end });
-    stream.pipe(res);
+      const headers = {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunkSize,
+        'Content-Type': 'video/mp4'
+      };
+
+      res.writeHead(206, headers);
+      file.pipe(res);
+    } else {
+      const head = {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunkSize,
+        'Content-Type': 'video/mp4'
+      };
+      res.writeHead(200, head);
+      fs.createReadStream(videoFilePath).pipe(res);
+    }
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ error: 'Internal server error' });
