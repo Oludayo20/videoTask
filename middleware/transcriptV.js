@@ -1,7 +1,7 @@
 const fs = require('fs-extra');
 
 const axios = require('axios');
-const API_KEY = process.env.API_KEY;
+const API_KEY2 = process.env.API_KEY2;
 
 const transcriptVideo = async (audioFilePath) => {
   try {
