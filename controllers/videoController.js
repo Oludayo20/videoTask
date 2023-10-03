@@ -163,6 +163,15 @@ const streamBackVideo = async (req, res) => {
       res.writeHead(200, head);
       fs.createReadStream(videoFilePath).pipe(res);
     }
+
+    const transcript = await Transcript.findOne({ uploadKey })
+      .collation({ locale: 'en', strength: 2 })
+      .lean()
+      .exec();
+
+    if (transcript) {
+      res.write(JSON.stringify({ transcript }));
+    }
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ error: 'Internal server error' });
