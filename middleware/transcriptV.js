@@ -1,7 +1,7 @@
 const fs = require('fs-extra');
 
 const axios = require('axios');
-const API_KEY2 = process.env.API_KEY2;
+const API_KEY = process.env.API_KEY;
 
 const transcriptVideo = async (audioFilePath) => {
   try {
@@ -27,7 +27,7 @@ const transcriptVideo = async (audioFilePath) => {
       }
     );
 
-    console.log(response.data.results.channels[0].alternatives[0].transcript);
+    // console.log(response.data.results.channels[0].alternatives[0].transcript);
 
     return response.data.results.channels[0].alternatives[0].transcript;
   } catch (error) {
